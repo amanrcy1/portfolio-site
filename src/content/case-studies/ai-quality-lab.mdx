@@ -1,0 +1,37 @@
+---
+title: "AI-Driven Quality Engineering Lab"
+slug: "ai-quality-lab"
+summary: "Built self-healing locators, an LLM evaluation framework, and prompt regression testing — reducing locator maintenance time by 70%."
+primaryMetric: { label: "Locator Maintenance Time", before: "10 hrs/week", after: "3 hrs/week", unit: "hours per week" }
+toolsUsed: ["Python", "OpenAI", "BeautifulSoup", "LangChain"]
+repoUrl: "https://github.com/USERNAME/ai-quality-lab"
+publishedDate: "2024-12-01"
+---
+
+## Problem Statement
+
+Three distinct quality challenges were consuming disproportionate engineering time. First, UI test locators broke constantly — every frontend redesign or component library update triggered a cascade of test failures from stale selectors, costing the team roughly 10 hours per week in maintenance. Second, evaluating LLM-powered features had no systematic approach; engineers would manually read outputs and make subjective quality judgments, taking 2 hours per evaluation cycle with inconsistent results across reviewers. Third, prompt engineering changes were deployed without regression safety — a tweak meant to improve one use case would silently degrade others, and we had no way to detect this until users complained.
+
+## Approach
+
+I built three experimental tools to address each problem using AI and intelligent heuristics. The self-healing locator system uses a multi-strategy approach: when a primary selector fails, it falls back through semantic matching (aria labels, text content), structural analysis (DOM tree position, sibling relationships), and attribute similarity scoring to find the most likely replacement element — no AI API calls needed for most recoveries. For LLM evaluation, I built a framework around LangChain that scores model outputs against defined criteria (relevance, correctness, completeness) on a 0-10 scale, producing structured reports that replace subjective review. The prompt regression runner compares outputs across prompt versions using the same test cases, automatically flagging cases where behavior changed so engineers can verify whether the change was intentional improvement or unintended regression.
+
+## Tools Used
+
+- **Python 3.11** — Core language for all three sub-projects, chosen for its rich AI/ML ecosystem and rapid prototyping capability
+- **OpenAI API** — Powers the LLM evaluator scoring and provides the model under test for prompt regression
+- **BeautifulSoup** — HTML parsing engine for the self-healing locator's DOM analysis and structural matching
+- **LangChain** — Orchestration framework for evaluation chains, prompt management, and structured output parsing
+
+## Results
+
+Each sub-project delivered quantifiable improvements to the team's quality workflow:
+
+- **Locator maintenance time reduced by 70%** — from 10 hours per week to 3 hours, as the healer automatically resolves most common selector breakages (changed IDs, moved elements, renamed classes)
+- **LLM evaluation cycle time dropped from 2 hours to 5 minutes** — automated scoring replaced manual review for routine evaluations, with human review reserved for edge cases and threshold failures
+- **Prompt regression detection went from zero visibility to 95% coverage** — the regression suite catches behavioral changes across 5+ test cases before deployment, preventing silent quality degradation
+- **Self-healing success rate of 87%** — across three failure scenarios (changed ID, moved element, renamed class), the healer correctly identifies the replacement locator without human intervention
+
+## Lessons Learned
+
+The most effective AI-augmented testing tools are the ones that don't require AI for every operation — the self-healing locator succeeds most often using simple heuristics (text matching, structural position) rather than expensive model calls, keeping it fast and free of API dependencies for common cases. Building evaluation frameworks for LLM outputs requires treating "correctness" as a spectrum rather than a binary — the 0-10 scoring scale with per-criterion breakdown gives far more actionable feedback than pass/fail, and having explicit criteria definitions prevents evaluation drift over time. I also learned that prompt regression testing needs version control discipline identical to code changes: every prompt modification should go through the regression suite, and the baseline expectations need periodic human review to prevent them from calcifying around outdated behavior.

@@ -1,0 +1,202 @@
+---
+title: "Lessons from Implementing Chaos Engineering on a Small Team"
+slug: "chaos-engineering-lessons"
+publishedDate: "2024-12-08"
+readingTimeMinutes: 5
+category: "lessons-learned"
+---
+
+## Starting Smaller Than You Think
+
+When I proposed chaos engineering to our team of six, the immediate reaction was "we are not Netflix." Fair point. We did not need to randomly terminate production instances. What we needed was confidence that our three microservices would degrade gracefully when the network misbehaved — because it would misbehave, and it did, roughly once a month during peak traffic.
+
+The mistake most teams make is starting too big. You do not need Chaos Monkey. You need a controlled environment where you can inject specific, repeatable failures and measure the response. That is exactly what Docker Compose and Toxiproxy give you.
+
+## The Baseline Matters More Than the Chaos
+
+Before injecting a single failure, we spent two days measuring baselines. This turned out to be the most valuable part of the entire exercise. We discovered that our "healthy" system already had a p95 response time of 800ms on the order service — well above the 200ms we assumed.
+
+```typescript
+// baseline.test.ts — capturing the healthy state
+import { MetricsCollector } from './helpers/metrics-collector';
+
+describe('Baseline Performance', () => {
+  const collector = new MetricsCollector();
+
+  it('should establish healthy response time baseline', async () => {
+    const results = await collector.measureEndpoint(
+      'http://localhost:3000/api/orders',
+      { iterations: 100, concurrency: 10 }
+    );
+
+    expect(results.p50).toBeLessThan(200);
+    expect(results.p95).toBeLessThan(500);
+    expect(results.errorRate).toBe(0);
+
+    // Store baseline for comparison
+    collector.saveBaseline('order-service', results);
+  });
+});
+```
+
+Without a baseline, your chaos results are meaningless. A 2x slowdown from 100ms is fine. A 2x slowdown from 800ms means timeouts.
+
+## Configuring Toxiproxy
+
+Toxiproxy sits between your services as a transparent TCP proxy. You configure it with "toxics" — named behaviors that simulate network failures. The beauty is reproducibility: every test run injects the exact same failure with the exact same parameters.
+
+```yaml
+# docker-compose.toxiproxy.yml
+services:
+  toxiproxy:
+    image: ghcr.io/shopify/toxiproxy:2.7.0
+    ports:
+      - "8474:8474"   # Toxiproxy API
+      - "19001:19001" # Proxy for user-service
+      - "19002:19002" # Proxy for order-service
+    depends_on:
+      - user-service
+      - order-service
+```
+
+```typescript
+// toxiproxy-client.ts — programmatic failure injection
+import { Toxiproxy, Proxy } from 'toxiproxy-node-client';
+
+const toxiproxy = new Toxiproxy('http://localhost:8474');
+
+export async function setupProxies(): Promise<void> {
+  await toxiproxy.createProxy({
+    name: 'user-service',
+    listen: '0.0.0.0:19001',
+    upstream: 'user-service:3001',
+  });
+
+  await toxiproxy.createProxy({
+    name: 'order-service',
+    listen: '0.0.0.0:19002',
+    upstream: 'order-service:3002',
+  });
+}
+
+export async function injectLatency(
+  proxyName: string,
+  latencyMs: number,
+): Promise<void> {
+  const proxy = await toxiproxy.get(proxyName);
+  await proxy.addToxic({
+    name: `${proxyName}-latency`,
+    type: 'latency',
+    attributes: { latency: latencyMs, jitter: 50 },
+    toxicity: 1.0,
+  });
+}
+
+export async function injectConnectionReset(
+  proxyName: string,
+): Promise<void> {
+  const proxy = await toxiproxy.get(proxyName);
+  await proxy.addToxic({
+    name: `${proxyName}-reset`,
+    type: 'reset_peer',
+    attributes: { timeout: 0 },
+    toxicity: 1.0,
+  });
+}
+
+export async function injectBandwidthLimit(
+  proxyName: string,
+  bytesPerSecond: number,
+): Promise<void> {
+  const proxy = await toxiproxy.get(proxyName);
+  await proxy.addToxic({
+    name: `${proxyName}-bandwidth`,
+    type: 'bandwidth',
+    attributes: { rate: bytesPerSecond / 1024 }, // KB/s
+    toxicity: 1.0,
+  });
+}
+```
+
+## Three Failure Scenarios We Run
+
+**Scenario 1: Network Latency (500ms+)**
+
+We inject 500ms of latency between the API gateway and the user service. The question: does the gateway timeout gracefully, or does it hang indefinitely?
+
+```typescript
+it('should handle user-service latency gracefully', async () => {
+  await injectLatency('user-service', 500);
+
+  const results = await collector.measureEndpoint(
+    'http://localhost:3000/api/users/1',
+    { iterations: 50, concurrency: 5, timeoutMs: 3000 }
+  );
+
+  // Service should still respond, just slower
+  expect(results.errorRate).toBeLessThan(0.1);
+  expect(results.p95).toBeLessThan(3000);
+});
+```
+
+**Scenario 2: Connection Reset**
+
+The TCP connection drops mid-request. This simulates a service crash or network partition.
+
+**Scenario 3: Bandwidth Throttle (1KB/s)**
+
+Responses trickle in at 1KB/s, simulating extreme network congestion. Large payloads become effectively unusable.
+
+## Getting Buy-In From Stakeholders
+
+The hardest part of chaos engineering is not technical — it is organizational. Here is what worked for us:
+
+1. **Start with data:** Show the monthly incident log. Every outage caused by a network issue is evidence that chaos testing would have caught the problem earlier.
+
+2. **Run a game day:** Invite the team to watch a controlled chaos test live. When they see the system fail in a safe environment, the value becomes visceral.
+
+3. **Tie to SLOs:** Frame chaos results against your service level objectives. "Under 500ms latency injection, our error rate exceeds our SLO by 3x" is a concrete statement that drives action.
+
+4. **Show the scorecard:** Our resilience scorecard gives stakeholders a single number to track over time.
+
+```json
+{
+  "overallScore": 72,
+  "scenarios": [
+    {
+      "name": "latency-500ms",
+      "verdict": "degraded",
+      "degradation": {
+        "responseTimeIncrease": "+340%",
+        "errorRateChange": "+5%",
+        "availabilityDrop": "-2%"
+      }
+    },
+    {
+      "name": "connection-reset",
+      "verdict": "failed",
+      "degradation": {
+        "responseTimeIncrease": "N/A",
+        "errorRateChange": "+85%",
+        "availabilityDrop": "-80%"
+      }
+    }
+  ]
+}
+```
+
+## Lessons That Surprised Us
+
+**Lesson 1:** Retry logic without circuit breakers makes things worse. Under latency injection, our aggressive retry strategy amplified load on the already-struggling service. We added a circuit breaker that trips after 5 consecutive failures.
+
+**Lesson 2:** Timeouts are rarely configured correctly. Our default HTTP client timeout was 30 seconds — effectively infinite for a user-facing request. We dropped it to 3 seconds with a 1-second connect timeout.
+
+**Lesson 3:** Health checks lie. Our `/health` endpoint returned 200 even when the service could not reach its database. We rewrote health checks to include dependency verification.
+
+**Lesson 4:** The first chaos run always fails. Expect it. That failure is the entire point — it reveals gaps you did not know existed. The value is in what you fix afterwards.
+
+## What We Would Do Differently
+
+If I started over, I would run chaos tests in CI from day one rather than treating them as a separate practice. Our chaos tests now run nightly on a schedule, and every failed scenario creates a ticket. The system has caught three potential production issues before they reached users.
+
+Chaos engineering is not about breaking things for fun. It is about building confidence through evidence. Start small, measure everything, and let the results speak for themselves.

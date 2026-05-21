@@ -1,0 +1,37 @@
+---
+title: "Cross-Browser Test Automation Framework with Playwright"
+slug: "automation-framework"
+summary: "Replaced a flaky Selenium suite with a Playwright-based framework using POM patterns, parallel execution, and Allure reporting — cutting execution time by 73%."
+primaryMetric: { label: "Execution Time", before: "45 min", after: "12 min", unit: "minutes" }
+toolsUsed: ["Playwright", "TypeScript", "GitHub Actions", "Allure"]
+repoUrl: "https://github.com/USERNAME/test-automation-framework"
+publishedDate: "2024-12-01"
+---
+
+## Problem Statement
+
+Our existing Selenium-based test suite had become a maintenance nightmare. Tests were flaky, with a 30% failure rate on any given run due to implicit waits, brittle locators, and a monolithic test architecture that made debugging nearly impossible. Execution time had ballooned to 45 minutes for the full suite, blocking CI pipelines and forcing developers to skip test runs before merging. Test coverage had plateaued at 40% because the team avoided writing new tests — the cost of maintaining them outweighed the perceived benefit.
+
+## Approach
+
+I designed a ground-up replacement using Playwright with TypeScript, built around the Page Object Model pattern to enforce separation of concerns between test logic and page interactions. Each page object encapsulates locators and actions, making tests resilient to UI changes — when an element moves, only the page object needs updating rather than every test that touches that element. I introduced parallel execution across Chromium, Firefox, and WebKit to maximize throughput, combined with automatic retries (2 per test) to handle genuine transient failures without masking real bugs. Allure reporting was integrated to give the team rich, interactive reports with step-by-step execution details, screenshots on failure, and historical trend data.
+
+## Tools Used
+
+- **Playwright** — Cross-browser automation with auto-wait, network interception, and built-in assertions
+- **TypeScript** — Type safety for page objects and test utilities, catching errors at compile time
+- **GitHub Actions** — CI/CD pipeline running on every push to main with matrix strategy for parallel browser execution
+- **Allure Framework** — Interactive HTML reports published to GitHub Pages with historical trends
+
+## Results
+
+The migration delivered measurable improvements across every dimension we tracked:
+
+- **Execution time reduced from 45 minutes to 12 minutes** — a 73% reduction achieved through parallel execution and Playwright's faster browser automation engine
+- **Test coverage increased from 40% to 85%** — the team started writing tests again because the framework made it easy and maintainable
+- **Flaky test rate dropped from 30% to under 3%** — Playwright's auto-wait mechanism and explicit assertions eliminated the timing issues that plagued our Selenium suite
+- **Mean time to debug failures decreased by 60%** — Allure reports with screenshots, traces, and step annotations made root cause analysis straightforward
+
+## Lessons Learned
+
+Investing in developer experience pays compounding returns — when the framework is pleasant to use and tests are easy to write, coverage grows organically without mandates or metrics pressure. The Page Object Model pattern proved essential not just for maintainability but for onboarding; new team members could write their first test within an hour by following the established patterns. I also learned that reporting infrastructure is not a luxury — the Allure reports became the team's primary tool for understanding test health, and the historical trend data helped us identify when regressions were introduced before they reached production.

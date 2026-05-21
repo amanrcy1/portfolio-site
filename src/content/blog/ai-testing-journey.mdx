@@ -1,0 +1,168 @@
+---
+title: "My Journey Applying AI to Testing Workflows"
+slug: "ai-testing-journey"
+publishedDate: "2024-12-05"
+readingTimeMinutes: 5
+category: "lessons-learned"
+---
+
+## Where This Started
+
+Six months ago, I asked a simple question: can an LLM reliably evaluate whether another LLM's output is correct? It sounds circular, but this is the core problem in AI testing — you need a judge, and increasingly that judge is also an AI. My journey from skeptic to practitioner taught me where AI genuinely accelerates testing workflows and where it creates more problems than it solves.
+
+## Where AI Adds Real Value
+
+### Test Data Generation
+
+The most immediate win was generating realistic test data. Instead of hand-crafting 50 user profiles for integration tests, an LLM generates diverse, internally consistent data in seconds. The quality is high enough that it catches edge cases human-authored data would miss — Unicode names, extremely long email addresses, timezone edge cases.
+
+```python
+# Using an LLM to generate diverse test scenarios
+def generate_test_scenarios(feature_description: str) -> list[TestCase]:
+    prompt = f"""Generate 10 diverse test scenarios for:
+    {feature_description}
+
+    Include: happy paths, edge cases, error conditions.
+    Format each as JSON with fields: name, input, expected_behavior.
+    Focus on scenarios a human tester might overlook."""
+
+    response = llm.generate(prompt, temperature=0.7)
+    scenarios = parse_json_array(response)
+    return [TestCase(**s) for s in scenarios]
+```
+
+### LLM Output Evaluation
+
+Testing LLM-powered features requires evaluating natural language output against criteria. Traditional assertion-based testing breaks down when the output is not deterministic. We built an evaluation framework that scores responses on multiple dimensions.
+
+```python
+class LLMEvaluator:
+    def __init__(self, criteria: list[EvaluationCriterion]):
+        self.criteria = criteria
+
+    def evaluate(self, prompt: str, response: str) -> EvaluationResult:
+        scores = {}
+        reasoning = {}
+
+        for criterion in self.criteria:
+            eval_prompt = f"""Rate the following response on
+            {criterion.name} (0-10 scale).
+
+            Criterion definition: {criterion.description}
+
+            Original prompt: {prompt}
+            Response to evaluate: {response}
+
+            Provide a score and one-sentence justification."""
+
+            result = self._score_criterion(eval_prompt)
+            scores[criterion.name] = result.score
+            reasoning[criterion.name] = result.reasoning
+
+        overall = sum(
+            scores[c.name] * c.weight for c in self.criteria
+        )
+        return EvaluationResult(
+            scores=scores,
+            overall_score=overall,
+            reasoning=reasoning,
+        )
+```
+
+### Prompt Regression Testing
+
+When you change a prompt, you need to know if the output quality improved or degraded. We built a regression suite that compares outputs across prompt versions using the same test cases.
+
+```python
+class PromptRegressionRunner:
+    def compare_versions(
+        self,
+        v1_prompt: str,
+        v2_prompt: str,
+        test_cases: list[TestCase],
+    ) -> RegressionReport:
+        results = []
+        for case in test_cases:
+            v1_output = self.run_prompt(v1_prompt, case.input)
+            v2_output = self.run_prompt(v2_prompt, case.input)
+
+            similarity = self.compute_similarity(v1_output, v2_output)
+            results.append(CaseComparison(
+                test_case_id=case.id,
+                v1_output=v1_output,
+                v2_output=v2_output,
+                is_different=similarity < 0.85,
+                similarity_score=similarity,
+            ))
+
+        differing = [r for r in results if r.is_different]
+        return RegressionReport(
+            total_cases=len(results),
+            differing_cases=len(differing),
+            results=results,
+        )
+```
+
+## Where AI Falls Short
+
+### Flaky Evaluations
+
+LLM-as-judge evaluations are not deterministic. The same response evaluated twice can receive different scores. We measured a variance of plus or minus 1.5 points on a 10-point scale. For pass/fail decisions, this variance is unacceptable without multiple evaluation runs and averaging.
+
+```python
+# The problem: non-deterministic scoring
+scores_for_same_response = [7.5, 8.0, 6.5, 7.0, 8.5]
+# Variance too high for reliable pass/fail at threshold of 7.0
+# Solution: run 3 evaluations and take the median
+median_score = sorted(scores_for_same_response)[len(scores_for_same_response) // 2]
+```
+
+### False Confidence in Generated Tests
+
+AI-generated test cases look plausible but can encode incorrect assumptions. We caught several generated assertions that validated wrong behavior — the LLM assumed what the output should be without understanding the actual business rules. Every generated test still needs human review of the assertions.
+
+### Cost at Scale
+
+Running LLM evaluations on every CI build is expensive. Evaluating 50 test cases with 3 criteria each means 150 LLM calls per run. At scale, this costs real money and adds minutes to pipeline execution. We moved AI evaluation to nightly runs and used deterministic checks (regex, schema validation, keyword presence) for fast CI feedback.
+
+## Practical Tips for AI-Augmented Testing
+
+**Tip 1: Use AI for generation, humans for validation.** Let the LLM propose test scenarios and data, but have a human approve the expected outcomes. This captures the creativity benefits without the correctness risks.
+
+**Tip 2: Set wide thresholds initially.** Start with generous pass/fail criteria (e.g., score above 5 out of 10) and tighten as you build confidence in the evaluator's accuracy. Tight thresholds on an inconsistent judge produce noise.
+
+**Tip 3: Always have a deterministic escape hatch.** For critical paths, supplement LLM evaluation with concrete assertions:
+
+```python
+def evaluate_with_fallback(response: str, criteria: dict) -> bool:
+    # Hard requirements checked deterministically
+    if len(response) < criteria["min_length"]:
+        return False
+    if not all(kw in response for kw in criteria["required_keywords"]):
+        return False
+
+    # Soft quality checked by LLM
+    quality_score = llm_evaluate(response, criteria["quality_prompt"])
+    return quality_score >= criteria["min_quality_score"]
+```
+
+**Tip 4: Version your prompts like code.** Store evaluation prompts in version-controlled files. When scores drift, you can diff the prompt history and identify what changed. This is the same principle as prompt regression testing applied to your test infrastructure itself.
+
+**Tip 5: Mock the LLM in CI.** For fast feedback loops, mock LLM responses with cached outputs from a known-good run. Run real evaluations on a schedule (nightly) rather than on every push.
+
+```python
+# conftest.py — mock mode for CI
+@pytest.fixture
+def llm_client(request):
+    if os.environ.get("CI") or os.environ.get("MOCK_LLM"):
+        return MockLLMClient(responses_file="fixtures/cached_responses.json")
+    return RealLLMClient(api_key=os.environ["OPENAI_API_KEY"])
+```
+
+## What I Learned
+
+AI does not replace testing fundamentals. It accelerates specific workflows — data generation, natural language evaluation, exploratory scenario discovery — but introduces its own testing challenges: non-determinism, cost management, and the meta-problem of testing your test infrastructure.
+
+The teams getting the most value from AI in testing are those treating it as a power tool, not an autopilot. They use AI to expand coverage into areas that were previously too expensive to test (natural language quality, creative edge cases, visual regression descriptions) while maintaining deterministic assertions for critical business logic.
+
+Start with one use case. Measure whether it actually saves time or just feels novel. Scale from there.

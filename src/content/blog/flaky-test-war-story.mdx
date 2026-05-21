@@ -1,0 +1,165 @@
+---
+title: "The Flaky Test That Took Three Weeks to Kill"
+slug: "flaky-test-war-story"
+publishedDate: "2024-12-01"
+readingTimeMinutes: 4
+category: "war-stories"
+---
+
+## The Symptoms
+
+It started with a single test: `checkout.spec.ts > should apply discount code successfully`. It failed roughly once every 8 CI runs. Never locally. Never when you watched it. Only in CI, only unpredictably, and only often enough to make the team distrust the entire suite.
+
+The failure message was maddening in its simplicity:
+
+```
+Error: Timed out 5000ms waiting for expect(locator).toHaveText('$85.50')
+  Received: '$95.00'
+```
+
+The discount was not applied. But the code was correct — it worked perfectly in 7 out of 8 runs. We marked the test with a retry annotation and moved on. Then it started failing 1 in 4. Then 1 in 3. Something was getting worse.
+
+## The Investigation
+
+**Week 1: The obvious suspects.** I added explicit waits before the assertion, increased timeouts, added `waitForLoadState('networkidle')`. None of it helped. The test still failed at the same rate.
+
+```typescript
+// What we tried first — none of this fixed it
+await page.waitForLoadState('networkidle');
+await page.waitForTimeout(1000); // desperation
+await expect(page.getByTestId('total-price'))
+  .toHaveText('$85.50', { timeout: 10000 });
+```
+
+**Week 2: The race condition theory.** I suspected a race between the discount API call and the UI render. Added network interception logging to capture timing:
+
+```typescript
+page.on('response', (response) => {
+  if (response.url().includes('/api/discount')) {
+    console.log(`Discount API responded: ${response.status()} at ${Date.now()}`);
+  }
+});
+```
+
+The API always returned 200 with the correct discount. The response arrived before the assertion timeout. The data was correct on the wire. But the UI did not reflect it.
+
+**Week 2.5: The animation clue.** While reviewing a trace file from a failed run, I noticed something subtle. The price element had a CSS transition on it — a 300ms fade animation when the price updated. The Playwright assertion was reading the DOM during the transition when both the old and new values coexisted momentarily in a layout recalculation.
+
+But that should not matter — `toHaveText` retries until the timeout. Unless something else was happening.
+
+## The Root Cause
+
+The actual bug was in the React component. The price display used a state update pattern that, under certain race conditions, would fire the re-render twice: once with the stale price and once with the discounted price. On fast machines (local dev), both renders happened within a single animation frame. On slower CI runners, they could be separated by enough time for the assertion retry to read the intermediate state.
+
+Here is the problematic code:
+
+```typescript
+// BEFORE: The buggy implementation
+const CheckoutTotal = ({ items, discountCode }) => {
+  const [total, setTotal] = useState(calculateTotal(items));
+
+  useEffect(() => {
+    // This fires and sets the base total
+    setTotal(calculateTotal(items));
+  }, [items]);
+
+  useEffect(() => {
+    // This fires AFTER and applies discount
+    // But on slow machines, there is a gap between these two effects
+    if (discountCode) {
+      applyDiscount(discountCode, total).then((discounted) => {
+        setTotal(discounted);
+      });
+    }
+  }, [discountCode, total]); // 'total' in deps caused re-fire loop
+
+  return <span data-testid="total-price">${total.toFixed(2)}</span>;
+};
+```
+
+The `total` dependency in the second `useEffect` created a cascade: set base total, which triggers discount recalculation, which sets discounted total, which (on the next render) sees `total` changed and re-fires the discount logic. On most machines this resolved instantly. On CI runners under load, the intermediate state persisted long enough for the test to read it.
+
+## The Fix
+
+The fix was straightforward once we understood the cause: compute the final total in a single pass without cascading effects.
+
+```typescript
+// AFTER: Single computation, no cascading effects
+const CheckoutTotal = ({ items, discountCode }) => {
+  const [total, setTotal] = useState<number | null>(null);
+  const [isCalculating, setIsCalculating] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setIsCalculating(true);
+
+    const computeTotal = async () => {
+      const baseTotal = calculateTotal(items);
+      let finalTotal = baseTotal;
+
+      if (discountCode) {
+        finalTotal = await applyDiscount(discountCode, baseTotal);
+      }
+
+      if (!cancelled) {
+        setTotal(finalTotal);
+        setIsCalculating(false);
+      }
+    };
+
+    computeTotal();
+    return () => { cancelled = true; };
+  }, [items, discountCode]);
+
+  if (isCalculating || total === null) {
+    return <span data-testid="total-price">Calculating...</span>;
+  }
+
+  return <span data-testid="total-price">${total.toFixed(2)}</span>;
+};
+```
+
+The test now waits for the final state and never sees an intermediate value:
+
+```typescript
+// The test after the fix — clean and reliable
+await page.getByTestId('discount-input').fill('SAVE10');
+await page.getByRole('button', { name: 'Apply' }).click();
+
+// Wait for calculation to complete
+await expect(page.getByTestId('total-price'))
+  .not.toHaveText('Calculating...');
+await expect(page.getByTestId('total-price'))
+  .toHaveText('$85.50');
+```
+
+## Prevention: What We Changed
+
+After this experience, we implemented three systemic changes:
+
+**1. Flaky test quarantine with tracking.** Any test that fails in CI but passes on retry gets automatically tagged. After 3 quarantine events, it creates a ticket for investigation rather than allowing infinite retries to mask the problem.
+
+**2. No cascading `useEffect` chains.** We added a lint rule that warns when a state variable appears in both the setter and dependency array of related effects. This pattern is almost always a race condition waiting to happen.
+
+```typescript
+// eslint rule: no-cascading-effects
+// Warns on patterns like:
+useEffect(() => { setFoo(bar); }, [bar]);
+useEffect(() => { doSomething(foo); }, [foo]); // foo set by previous effect
+```
+
+**3. CI-representative local testing.** We added a `test:ci` script that throttles CPU to 2 cores and limits memory to 4GB, approximating CI runner constraints. Running this locally reproduced the flaky test on the first attempt.
+
+```json
+{
+  "scripts": {
+    "test:ci": "cpulimit -l 200 -- npx playwright test --workers=2"
+  }
+}
+```
+
+## The Takeaway
+
+Flaky tests are not random. They are deterministic bugs whose trigger conditions are hard to reproduce. This test failed because of a real race condition in the application code — the flakiness was the test correctly detecting an intermittent bug, not a test quality issue.
+
+The three-week timeline was not because the fix was complex. It was because we spent two weeks assuming the test was wrong rather than investigating whether the application had a genuine timing issue. When a test fails intermittently, start by asking: "What if this test is correctly catching an intermittent bug?" That question would have saved us two weeks.

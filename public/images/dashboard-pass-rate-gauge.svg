@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="600" viewBox="0 0 1200 600">
+  <rect width="1200" height="600" fill="#0F172A"/>
+  <!-- Header -->
+  <text x="40" y="50" font-family="Inter, sans-serif" font-size="24" font-weight="bold" fill="#F8FAFC">Pass Rate Gauge &amp; Execution Time</text>
+  <text x="40" y="78" font-family="Inter, sans-serif" font-size="13" fill="#94A3B8">Overall pass rate indicator with per-repository execution time comparison.</text>
+  <!-- Pass Rate Gauge Card -->
+  <rect x="40" y="100" width="540" height="380" rx="12" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+  <text x="60" y="140" font-family="Inter, sans-serif" font-size="16" font-weight="600" fill="#F8FAFC">Overall Pass Rate</text>
+  <!-- Gauge circle -->
+  <circle cx="310" cy="300" r="100" fill="none" stroke="#334155" stroke-width="16"/>
+  <circle cx="310" cy="300" r="100" fill="none" stroke="#10B981" stroke-width="16" stroke-dasharray="565 628" stroke-linecap="round" transform="rotate(-90 310 300)"/>
+  <text x="270" y="310" font-family="Inter, sans-serif" font-size="42" font-weight="bold" fill="#F8FAFC">94%</text>
+  <text x="278" y="340" font-family="Inter, sans-serif" font-size="14" fill="#94A3B8">pass rate</text>
+  <!-- Legend -->
+  <circle cx="200" cy="430" r="5" fill="#10B981"/>
+  <text x="212" y="435" font-family="Inter, sans-serif" font-size="12" fill="#94A3B8">Passing (588 tests)</text>
+  <circle cx="370" cy="430" r="5" fill="#EF4444"/>
+  <text x="382" y="435" font-family="Inter, sans-serif" font-size="12" fill="#94A3B8">Failing (37 tests)</text>
+  <!-- Execution Time Card -->
+  <rect x="620" y="100" width="540" height="380" rx="12" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+  <text x="640" y="140" font-family="Inter, sans-serif" font-size="16" font-weight="600" fill="#F8FAFC">Execution Time by Repository</text>
+  <!-- Bar chart -->
+  <text x="660" y="195" font-family="Inter, sans-serif" font-size="11" fill="#94A3B8">test-automation</text>
+  <rect x="780" y="180" width="240" height="24" rx="4" fill="#2563EB"/>
+  <text x="1030" y="197" font-family="Inter, sans-serif" font-size="11" fill="#94A3B8">3m 42s</text>
+  <text x="660" y="245" font-family="Inter, sans-serif" font-size="11" fill="#94A3B8">api-contract</text>
+  <rect x="780" y="230" width="150" height="24" rx="4" fill="#7C3AED"/>
+  <text x="940" y="247" font-family="Inter, sans-serif" font-size="11" fill="#94A3B8">2m 18s</text>
+  <text x="660" y="295" font-family="Inter, sans-serif" font-size="11" fill="#94A3B8">ai-quality-lab</text>
+  <rect x="780" y="280" width="125" height="24" rx="4" fill="#10B981"/>
+  <text x="915" y="297" font-family="Inter, sans-serif" font-size="11" fill="#94A3B8">1m 56s</text>
+  <text x="660" y="345" font-family="Inter, sans-serif" font-size="11" fill="#94A3B8">chaos-resilience</text>
+  <rect x="780" y="330" width="330" height="24" rx="4" fill="#F59E0B"/>
+  <text x="1120" y="347" font-family="Inter, sans-serif" font-size="11" fill="#94A3B8">5m 12s</text>
+  <text x="660" y="395" font-family="Inter, sans-serif" font-size="11" fill="#94A3B8">test-strategy</text>
+  <rect x="780" y="380" width="50" height="24" rx="4" fill="#EC4899"/>
+  <text x="840" y="397" font-family="Inter, sans-serif" font-size="11" fill="#94A3B8">0m 48s</text>
+  <!-- Y axis label -->
+  <text x="640" y="440" font-family="Inter, sans-serif" font-size="11" fill="#64748B">Duration (minutes)</text>
+  <!-- Footer label -->
+  <text x="40" y="520" font-family="Inter, sans-serif" font-size="11" fill="#64748B">Screenshot placeholder — Pass rate gauge and execution time bar chart comparison</text>
+  <!-- Placeholder notice -->
+  <rect x="40" y="540" width="1120" height="40" rx="8" fill="#1E293B" stroke="#2563EB" stroke-width="1" stroke-dasharray="8,4"/>
+  <text x="600" y="565" font-family="Inter, sans-serif" font-size="14" fill="#94A3B8" text-anchor="middle">📸 Replace with actual screenshot after deployment</text>
+</svg>

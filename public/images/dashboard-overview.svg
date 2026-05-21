@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
+  <rect width="1200" height="800" fill="#0F172A"/>
+  <!-- Header -->
+  <text x="40" y="60" font-family="Inter, sans-serif" font-size="28" font-weight="bold" fill="#F8FAFC">Quality Metrics Dashboard</text>
+  <text x="40" y="90" font-family="Inter, sans-serif" font-size="14" fill="#94A3B8">Live quality metrics from portfolio project CI pipelines.</text>
+  <!-- Pass/Fail Trend Chart Placeholder -->
+  <rect x="40" y="120" width="1120" height="280" rx="12" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+  <text x="60" y="155" font-family="Inter, sans-serif" font-size="16" font-weight="600" fill="#F8FAFC">Pass/Fail Trend</text>
+  <polyline points="80,350 200,320 320,330 440,290 560,280 680,260 800,270 920,240 1040,230" stroke="#2563EB" stroke-width="3" fill="none"/>
+  <polyline points="80,360 200,370 320,365 440,380 560,375 680,390 800,385 920,395 1040,390" stroke="#EF4444" stroke-width="2" fill="none" stroke-dasharray="5,5"/>
+  <!-- Pipeline Status Table Placeholder -->
+  <rect x="40" y="420" width="540" height="200" rx="12" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+  <text x="60" y="455" font-family="Inter, sans-serif" font-size="16" font-weight="600" fill="#F8FAFC">Pipeline Status</text>
+  <rect x="60" y="470" width="500" height="30" rx="4" fill="#334155"/>
+  <text x="80" y="490" font-family="Inter, sans-serif" font-size="12" fill="#94A3B8">Repository</text>
+  <text x="300" y="490" font-family="Inter, sans-serif" font-size="12" fill="#94A3B8">Status</text>
+  <text x="420" y="490" font-family="Inter, sans-serif" font-size="12" fill="#94A3B8">Pass Rate</text>
+  <text x="80" y="520" font-family="Inter, sans-serif" font-size="12" fill="#F8FAFC">test-automation-framework</text>
+  <circle cx="320" cy="516" r="5" fill="#10B981"/>
+  <text x="420" y="520" font-family="Inter, sans-serif" font-size="12" fill="#10B981">96%</text>
+  <text x="80" y="548" font-family="Inter, sans-serif" font-size="12" fill="#F8FAFC">api-contract-testing</text>
+  <circle cx="320" cy="544" r="5" fill="#10B981"/>
+  <text x="420" y="548" font-family="Inter, sans-serif" font-size="12" fill="#10B981">100%</text>
+  <text x="80" y="576" font-family="Inter, sans-serif" font-size="12" fill="#F8FAFC">ai-quality-lab</text>
+  <circle cx="320" cy="572" r="5" fill="#10B981"/>
+  <text x="420" y="576" font-family="Inter, sans-serif" font-size="12" fill="#10B981">92%</text>
+  <!-- Gauge + Bar chart -->
+  <rect x="620" y="420" width="540" height="200" rx="12" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+  <text x="640" y="455" font-family="Inter, sans-serif" font-size="16" font-weight="600" fill="#F8FAFC">Pass Rate &amp; Execution Time</text>
+  <circle cx="740" cy="540" r="60" fill="none" stroke="#334155" stroke-width="10"/>
+  <circle cx="740" cy="540" r="60" fill="none" stroke="#10B981" stroke-width="10" stroke-dasharray="340 377" transform="rotate(-90 740 540)"/>
+  <text x="720" y="548" font-family="Inter, sans-serif" font-size="20" font-weight="bold" fill="#F8FAFC">94%</text>
+  <rect x="880" y="490" width="40" height="80" rx="4" fill="#2563EB"/>
+  <rect x="940" y="510" width="40" height="60" rx="4" fill="#7C3AED"/>
+  <rect x="1000" y="520" width="40" height="50" rx="4" fill="#10B981"/>
+  <rect x="1060" y="500" width="40" height="70" rx="4" fill="#F59E0B"/>
+  <!-- Footer label -->
+  <text x="40" y="670" font-family="Inter, sans-serif" font-size="11" fill="#64748B">Screenshot placeholder — Full dashboard overview with all 4 visualizations</text>
+  <!-- Placeholder notice -->
+  <rect x="40" y="700" width="1120" height="60" rx="8" fill="#1E293B" stroke="#2563EB" stroke-width="1" stroke-dasharray="8,4"/>
+  <text x="600" y="735" font-family="Inter, sans-serif" font-size="14" fill="#94A3B8" text-anchor="middle">📸 Replace with actual screenshot after deployment</text>
+</svg>
