@@ -1,11 +1,11 @@
 {
-  "lastUpdated": "2026-11-13T13:39:54.529Z",
+  "lastUpdated": "2026-11-14T12:44:35.111Z",
   "pipelines": [
     {
       "name": "Test Automation Framework",
       "repoUrl": "https://github.com/amanrcy1/test-automation-framework",
       "isReachable": true,
-      "lastSuccessfulFetch": "2026-11-13T13:39:50.239Z",
+      "lastSuccessfulFetch": "2026-11-14T12:44:31.267Z",
       "runs": [
         {
           "id": 26212337713,
@@ -20,8 +20,8 @@
         {
           "id": 26212265301,
           "timestamp": "2026-05-21T07:35:09Z",
-          "totalTests": 2,
-          "passed": 2,
+          "totalTests": 1,
+          "passed": 1,
           "failed": 0,
           "skipped": 0,
           "passRate": 100,
@@ -33,16 +33,16 @@
       "name": "API Contract Testing",
       "repoUrl": "https://github.com/amanrcy1/api-contract-testing",
       "isReachable": true,
-      "lastSuccessfulFetch": "2026-11-13T13:39:51.505Z",
+      "lastSuccessfulFetch": "2026-11-14T12:44:32.397Z",
       "runs": [
         {
           "id": 26211913325,
           "timestamp": "2026-05-21T07:27:23Z",
-          "totalTests": 2,
-          "passed": 1,
+          "totalTests": 1,
+          "passed": 0,
           "failed": 1,
           "skipped": 0,
-          "passRate": 50,
+          "passRate": 0,
           "durationMs": 20000
         }
       ]
@@ -51,13 +51,13 @@
       "name": "AI Quality Lab",
       "repoUrl": "https://github.com/amanrcy1/ai-quality-lab",
       "isReachable": true,
-      "lastSuccessfulFetch": "2026-11-13T13:39:52.838Z",
+      "lastSuccessfulFetch": "2026-11-14T12:44:33.439Z",
       "runs": [
         {
           "id": 26211814992,
           "timestamp": "2026-05-21T07:25:10Z",
-          "totalTests": 4,
-          "passed": 4,
+          "totalTests": 1,
+          "passed": 1,
           "failed": 0,
           "skipped": 0,
           "passRate": 100,
@@ -69,7 +69,7 @@
       "name": "Chaos Resilience Tests",
       "repoUrl": "https://github.com/amanrcy1/chaos-resilience-tests",
       "isReachable": true,
-      "lastSuccessfulFetch": "2026-11-13T13:39:54.029Z",
+      "lastSuccessfulFetch": "2026-11-14T12:44:34.611Z",
       "runs": [
         {
           "id": 26211964725,
